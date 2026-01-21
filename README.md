@@ -1,6 +1,6 @@
 # PGN Fixer
 
-Tool for fixing chess PGNs with erroneous or ambiguous moves.
+Fix your chess PGNs' erroneous, ambiguous, and missing moves with this handy tool!
 Paste your PGN into the `Original PGN` box and hit `Load PGN`. When erroneous moves are found, the tool will wait for you to play the correct move, then continue until there are no more erroneous/ambiguous moves.
 *Currently unable to process comments and variations.*
 
