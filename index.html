@@ -225,7 +225,7 @@
       pgn = $pgnIn.val() || '';
 
       // Remove comment blocks like { ... }
-      pgn = pgn.replace(/\{[^}]*\}/g, '');
+      pgn = pgn.replace(/\{[^}]*\}/g, '').replace(/\$\d+/g, '');
 
       // Extract header lines (all lines that start with '[' and end with ']')
       let headerMatch = pgn.match(/^\s*\[.*?\]\s*$/gim);
