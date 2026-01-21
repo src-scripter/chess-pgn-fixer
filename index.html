@@ -76,7 +76,9 @@
   </div>
   <!--- End HTML -------------------------------------------------------->
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" 
+          integrity="sha384-vk5WoKIaW/vJyUAd9n/wmopsmNhiy+L2Z+SBxGYnUkunIxVxAv/UtMOhba/xskxh" 
+          crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
           integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
           crossorigin="anonymous"></script>
@@ -104,7 +106,8 @@
       draggable: true,
       onDragStart: onDragStart,
       onDrop: onDrop,
-      onSnapEnd: onSnapEnd
+      onSnapEnd: onSnapEnd,
+      pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     }
     board = Chessboard('myBoard', config)
 
@@ -134,7 +137,7 @@
 
     function getPgn(moves, to) {
       let pgn = "";
-      for (i = 0; i <= to; i++) {
+      for (let i = 0; i <= to; i++) {
         if (i % 2 == 0) {
           pgn += " " + (1 + i / 2) + ".";
         }
@@ -219,19 +222,32 @@
     function loadPgn() {
       pgnError = false;
       moves = [];
-      pgn = $pgnIn.val();
-      pgn = pgn.replace(/\{.+?\}/gm, '');
-      header = pgn.match(/\[.+\]/s);
-      header = header[0].replace(/^ +/gm, '');
+      pgn = $pgnIn.val() || '';
 
-      let rx = new RegExp(/\d+\.\s+(\S+)\s*(\S+)?/g);
+      // Remove comment blocks like { ... }
+      pgn = pgn.replace(/\{[^}]*\}/g, '');
 
-      while ((match = rx.exec(pgn)) != null) {
-        moves.push(match[1]);
-        moves.push(match[2]);
+      // Extract header lines (all lines that start with '[' and end with ']')
+      let headerMatch = pgn.match(/^\s*\[.*?\]\s*$/gim);
+      header = headerMatch ? headerMatch.join('\n') : '';
+
+      // Remove header lines to get only the movetext
+      let movetext = pgn.replace(/^\s*\[.*?\]\s*$/gim, '').trim();
+
+      // Strip a trailing game result if present (1-0, 0-1, 1/2-1/2 or *)
+      movetext = movetext.replace(/\s*(1-0|0-1|1\/2-1\/2|\*)\s*$/,'').trim();
+
+      // Regex to match move numbers and capture up to two SAN moves (white and optional black)
+      // Handles forms like "1. e4 e5" and "1... e5" (ellipsis for black-only in some notations)
+      let rx = /\d+\.(?:\s*\.\.\.)?\s*([^\s]+)(?:\s+([^\s]+))?/g;
+      let match;
+      while ((match = rx.exec(movetext)) !== null) {
+        if (match[1]) moves.push(match[1]);
+        if (match[2]) moves.push(match[2]);
       }
 
-      numPly = moves[moves.length - 1] === undefined ? moves.length - 1 : moves.length; // remove undef ply at end
+      // Number of ply is simply the number of parsed moves
+      numPly = moves.length;
 
       tryLoadPgn();
     }
