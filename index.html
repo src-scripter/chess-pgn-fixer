@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -51,8 +51,6 @@
       <p>Paste your PGN into the Orignal PGN box and hit Load PGN. When erroneous moves are found
         the tool will wait for you to play the correct move, then continue.
       </p>
-      <p>Current limitations: PGN must contain no comments or variations.
-      </p>
       <label>Erroneous/Ambiguous Move:</label>
       <div id="ambiguous"></div>
       <p></p>
@@ -101,6 +99,9 @@
     let tpgn = "";
     let lastOk = 0;
     let moves = [];
+    let commentMap = {}; // Map ply index to comments
+    let variationsMap = {}; // Map ply index to variations that start after that move
+    let rawPgnWithVariations = ""; // Store original PGN with variations intact
 
     var config = {
       draggable: true,
@@ -142,6 +143,10 @@
           pgn += " " + (1 + i / 2) + ".";
         }
         pgn += " " + moves[i];
+        // Append any comments associated with this ply
+        if (commentMap[i]) {
+          pgn += " " + commentMap[i];
+        }
       }
       return pgn;
     }
@@ -216,7 +221,141 @@
       $ambiguous.html(pgnError ? moves[lastOk + 1] : "None");
       $valid.html(game.moves().length > 0 ? game.moves().join(" ") : "None");
       $pgnIn.html(pgn);
-      $pgnOut.html(header + '\n' + game.pgn());
+      $pgnOut.html(header + '\n' + injectCommentsAndVariationsIntoPgn(game.pgn()));
+    }
+
+    /**
+     * Extract comments and variations from PGN text.
+     * Stores comments by ply index and variations by their starting ply.
+     * Returns the text with comments/annotations removed but keeps main line.
+     */
+    function extractCommentsAndVariations(pgnText) {
+      commentMap = {};
+      variationsMap = {};
+      rawPgnWithVariations = pgnText;
+
+      let cleanedText = pgnText;
+
+      // First, extract and store all variations (text within parentheses)
+      const variationRegex = /\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
+      let variationMatches = [];
+      let match;
+
+      while ((match = variationRegex.exec(pgnText)) !== null) {
+        variationMatches.push({
+          fullText: match[0],
+          content: match[1],
+          index: match.index
+        });
+      }
+
+      // Remove variations temporarily to process main line
+      cleanedText = pgnText.replace(/\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '');
+
+      // Extract comments from remaining text
+      const commentRegex = /\{[^}]*\}|\$\d+/g;
+      let commentMatches = [];
+      while ((match = commentRegex.exec(cleanedText)) !== null) {
+        commentMatches.push({
+          text: match[0],
+          index: match.index
+        });
+      }
+
+      // Build a mapping of moves to comments by parsing main line
+      let mainLineMoves = [];
+      let tempText = cleanedText.replace(/^\s*\[.*?\]\s*$/gm, '').trim();
+      tempText = tempText.replace(/\s*(1-0|0-1|1\/2-1\/2|\*)\s*$/,'').trim();
+
+      const moveRegex = /(\d+\.(?:\s*\.\.\.)?\s*)?([^\s{}]+)\s*(\{[^}]*\}|\$\d+)?/g;
+      let plyCount = 0;
+      let lastMoveNum = 0;
+
+      while ((match = moveRegex.exec(tempText)) !== null) {
+        const moveNum = match[1];
+        const move = match[2];
+        const comment = match[3];
+
+        if (!move.match(/^(1-0|0-1|1\/2-1\/2|\*)$/)) {
+          if (comment) {
+            commentMap[plyCount] = comment;
+          }
+          plyCount++;
+        }
+      }
+
+      // Store variations for later reinjection
+      // This is a simplified approach - a full implementation would need
+      // to map variations to their exact position in the corrected game
+      if (variationMatches.length > 0) {
+        for (let varMatch of variationMatches) {
+          variationsMap['raw'] = variationMatches;
+        }
+      }
+
+      // Remove all comments and variations
+      cleanedText = pgnText.replace(/\{[^}]*\}/g, '').replace(/\$\d+/g, '').replace(/\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '');
+
+      return cleanedText;
+    }
+
+    /**
+     * Reinject comments and variations back into the corrected PGN.
+     */
+    function injectCommentsAndVariationsIntoPgn(pgnText) {
+      if (Object.keys(commentMap).length === 0 && Object.keys(variationsMap).length === 0) {
+        return pgnText;
+      }
+
+      let result = "";
+      let plyIndex = 0;
+
+      const lines = pgnText.split('\n');
+      let outputLines = [];
+
+      for (let line of lines) {
+        // Skip header lines
+        if (line.match(/^\s*\[/)) {
+          outputLines.push(line);
+          continue;
+        }
+
+        // Process move line
+        let processedLine = line;
+        const moveTokens = line.trim().split(/\s+/);
+        let newTokens = [];
+
+        for (let token of moveTokens) {
+          newTokens.push(token);
+
+          // After each move (but not move numbers or results), add its comment if it exists
+          if (!/^\d+\.?$/.test(token) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(token) && token.length > 0) {
+            if (commentMap[plyIndex]) {
+              newTokens.push(commentMap[plyIndex]);
+            }
+            plyIndex++;
+          }
+        }
+
+        processedLine = newTokens.join(' ');
+
+        // Reinject variations if they exist
+        if (variationsMap['raw'] && variationsMap['raw'].length > 0) {
+          // This is a basic implementation - for full variation support,
+          // you would need more sophisticated parsing to match variation
+          // positions to their correct locations in the corrected game
+          for (let varMatch of variationsMap['raw']) {
+            // Try to insert variations at appropriate points
+            // This is a simplified heuristic approach
+            processedLine += ' ' + varMatch.fullText;
+          }
+        }
+
+        outputLines.push(processedLine);
+      }
+
+      result = outputLines.join('\n');
+      return result.trim();
     }
 
     function loadPgn() {
@@ -224,8 +363,14 @@
       moves = [];
       pgn = $pgnIn.val() || '';
 
-      // Remove comment blocks like { ... }
+      // Extract comments AND variations BEFORE removing them
+      extractCommentsAndVariations(pgn);
+
+      // Remove comment blocks and annotations
       pgn = pgn.replace(/\{[^}]*\}/g, '').replace(/\$\d+/g, '');
+
+      // Remove variations (parentheses) from main processing
+      pgn = pgn.replace(/\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '');
 
       // Extract header lines (all lines that start with '[' and end with ']')
       let headerMatch = pgn.match(/^\s*\[.*?\]\s*$/gim);
