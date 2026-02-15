@@ -6,85 +6,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PGN Fixer</title>
   <base href="../" />
-  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
-        integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU" crossorigin="anonymous">
-
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
   <style>
-    label {
-      font-weight: bold;
-    }
+  	body {
+  	  color: black;
+  	  font-family: monospace;
+  	  background-color: #ebecd0;
+  	  text-align: center;
+  	}
 
-    .column {
-      float: left;
-      padding-right: 50px;
-      max-width: 500px;
-    }
+  	button {
+  	  color: black;
+      font-family: var(--font-mono);
+   	  background-color: #779556;
+  	  padding: 5px 10px;
+      border-radius: 3px;
+      margin: 0.5rem;
+  	}
 
-    /* Clear floats after the columns */
-    .row:after {
-      content: "";
-      display: table;
-      clear: both;
-    }
+  	h1 {
+  		padding-top: 2rem;
+  	}
 
     @media screen and (max-width: 600px) {
       .column {
         width: 100%;
       }
     }
+
+	textarea {
+		width: 100%;
+	}
   </style>
 </head>
-
 <body>
-
-  <!--- Begin HTML ------------------------------------------------------>
-  <div class="row">
-    <div class="column">
-      <div id="myBoard" style="width: 400px"></div>
+  <div class="container">
+    <h1 class="title">PGN Fixer</h1>
+    <p>
+      This is a tool that can be used for fixing PGNs where some moves are incorrect - e.g. because they are ambiguous Knight or Rook moves.
+      Paste your PGN into the Orignal PGN box and hit Load PGN. When erroneous moves are found the tool will wait for you to play the correct move, then continue.
+    </p>
+    <br />
+    <div>
+      <div id="myBoard" class="container" style="width: 400px"></div>
+      <br />
       <button onclick="loadPgn()">Load PGN</button>
     </div>
-    <div class="column">
-      <h1>PGN Fixer</h1>
-      <p>This is a tool that can be used for fixing PGNs where some moves are incorrect - e.g.
-        because they are ambiguous Knight or Rook moves.
-      </p>
-      <p>Paste your PGN into the Orignal PGN box and hit Load PGN. When erroneous moves are found
-        the tool will wait for you to play the correct move, then continue.
-      </p>
-      <label>Erroneous/Ambiguous Move:</label>
-      <div id="ambiguous"></div>
-      <p></p>
-      <label>Valid Moves in this Position:</label>
-      <div id="valid"></div>
-      <p></p>
-      <label>Game Status:</label>
-      <div id="status"></div>
+    <br />
+    <div>
+      <b>Erroneous/Ambiguous Move:</b>
+      <p id="ambiguous"></p>
+      <b>Valid Moves in this Position:</b>
+      <p id="valid"></p>
+      <b>Game Status:</b>
+      <p id="status"></p>
+    </div>
+  	<div class="row">
+	  <div class="col">
+	    <b>Original PGN:</b>
+	    <br />
+	    <textarea id="pgnIn" rows="10"></textarea>
+	  </div>
+	  <div class="col">
+	    <b>Fixed PGN:</b>
+	    <br />
+	    <textarea id="pgn" rows="10"></textarea>
+	  </div>
     </div>
   </div>
-  <p></p>
-  <div class="row">
-    <div class="column">
-      <label>Original PGN:</label><br>
-      <textarea id="pgnIn" rows="24" cols="50"></textarea>
-    </div>
-    <div class="column">
-      <label>Fixed PGN:</label><br>
-      <textarea id="pgn" rows="24" cols="50"></textarea>
-    </div>
-  </div>
-  <!--- End HTML -------------------------------------------------------->
-
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" 
-          integrity="sha384-vk5WoKIaW/vJyUAd9n/wmopsmNhiy+L2Z+SBxGYnUkunIxVxAv/UtMOhba/xskxh" 
-          crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-          integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
-          crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"
-          integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz"
-          crossorigin="anonymous"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha384-vk5WoKIaW/vJyUAd9n/wmopsmNhiy+L2Z+SBxGYnUkunIxVxAv/UtMOhba/xskxh" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js" integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js" integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz" crossorigin="anonymous"></script>
   <script>
-
     let $ambiguous = $('#ambiguous');
     let $valid = $('#valid');
     let $status = $('#status');
@@ -396,8 +391,6 @@
 
       tryLoadPgn();
     }
-
   </script>
 </body>
-
 </html>
